@@ -6,6 +6,8 @@ const CELL_HEIGHT = 208;
 const ATLAS_WIDTH = 1536;
 const ATLAS_HEIGHT = 1872;
 const ATLAS_SRC = 'promotion-assets/spritesheet.webp';
+const SITE_URL = 'https://vrm-codex-pet-builder.mogami.dev';
+const SCENE_SECONDS = 3;
 
 const palette = {
   ink: '#edf4ef',
@@ -50,6 +52,11 @@ const scenes: SceneCopy[] = [
     eyebrow: 'そのまま配置できるZIP',
     titleLines: ['pet.jsonとWebPを', 'まとめて', 'ダウンロード。'],
     bodyLines: ['サイズ、透明度、未使用セルを検証してから、', '配布やインストールに進めます。'],
+  },
+  {
+    eyebrow: '公開中',
+    titleLines: ['今すぐ自分のVRMモデルで', 'Codexペットを作成しよう！'],
+    bodyLines: [SITE_URL],
   },
 ];
 
@@ -103,9 +110,10 @@ function frameIndex(frame: number, frames: number, speed: number): number {
 export const PromotionVideo = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const activeScene = Math.min(scenes.length - 1, Math.floor(frame / (3 * fps)));
-  const sceneStart = activeScene * 3 * fps;
-  const sceneEnd = sceneStart + 3 * fps;
+  const sceneFrames = SCENE_SECONDS * fps;
+  const activeScene = Math.min(scenes.length - 1, Math.floor(frame / sceneFrames));
+  const sceneStart = activeScene * sceneFrames;
+  const sceneEnd = sceneStart + sceneFrames;
   const sceneFade = fade(frame, sceneStart, sceneEnd);
   const local = progress(frame, sceneStart, sceneEnd);
   const copy = scenes[activeScene];
@@ -120,11 +128,12 @@ export const PromotionVideo = () => {
       <div style={styles.gridTexture} />
       <div style={styles.header}>
         <div style={styles.brand}>VRM Codex Pet Builder</div>
-        <div style={styles.branch}>promotionブランチ</div>
       </div>
 
       {activeScene === 0 ? (
         <IntroHero copy={copy} sceneFade={sceneFade} heroSpring={heroSpring} local={local} />
+      ) : activeScene === scenes.length - 1 ? (
+        <FinalCta copy={copy} sceneFade={sceneFade} heroSpring={heroSpring} local={local} />
       ) : (
         <>
           <CopyBlock copy={copy} sceneFade={sceneFade} heroSpring={heroSpring} />
@@ -141,7 +150,6 @@ export const PromotionVideo = () => {
 
       <div style={styles.footer}>
         <Timeline frame={frame} fps={fps} />
-        <span>静的Viteアプリ · React + Three.js + Remotion</span>
       </div>
     </AbsoluteFill>
   );
@@ -216,6 +224,55 @@ function IntroHero({
   );
 }
 
+function FinalCta({
+  copy,
+  sceneFade,
+  heroSpring,
+  local,
+}: {
+  copy: SceneCopy;
+  sceneFade: number;
+  heroSpring: number;
+  local: number;
+}) {
+  const frame = useCurrentFrame();
+  const waveCol = frameIndex(frame, states[3].frames, 6);
+  const runCol = frameIndex(frame, states[7].frames, 5);
+  const glow = interpolate(Math.sin(frame / 10), [-1, 1], [0.72, 1], fit);
+
+  return (
+    <div style={{ ...styles.ctaScene, opacity: sceneFade }}>
+      <div
+        style={{
+          ...styles.ctaPetHalo,
+          opacity: glow,
+          transform: `scale(${0.98 + local * 0.05})`,
+        }}
+      />
+      <div style={styles.ctaPetGroup}>
+        <SpriteFrame row={states[3].row} col={waveCol} scale={1.52} rotate={0} />
+        <SpriteFrame row={states[7].row} col={runCol} scale={0.92} rotate={-2} />
+        <SpriteFrame row={states[0].row} col={0} scale={0.82} rotate={2} />
+      </div>
+
+      <div style={styles.ctaCopy}>
+        <div style={styles.eyebrow}>{copy.eyebrow}</div>
+        <h1
+          style={{
+            ...styles.ctaTitle,
+            transform: `translateY(${(1 - heroSpring) * 26}px)`,
+          }}
+        >
+          {copy.titleLines.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </h1>
+        <div style={styles.ctaUrl}>{copy.bodyLines[0]}</div>
+      </div>
+    </div>
+  );
+}
+
 function CopyBlock({
   copy,
   sceneFade,
@@ -281,7 +338,7 @@ function BuilderMockup({ scene, local }: { scene: number; local: number }) {
           <span style={{ ...styles.dot, background: palette.yellow }} />
           <span style={{ ...styles.dot, background: palette.accent }} />
         </div>
-        <div style={styles.urlBar}>vrm-codex-pet-builder.pages.dev</div>
+        <div style={styles.urlBar}>vrm-codex-pet-builder.mogami.dev</div>
       </div>
 
       <div style={styles.mockupBody}>
@@ -406,17 +463,19 @@ function Pill({ active, children }: { active: boolean; children: string }) {
 }
 
 function Timeline({ frame, fps }: { frame: number; fps: number }) {
+  const sceneFrames = SCENE_SECONDS * fps;
+
   return (
     <div style={styles.timeline}>
       {scenes.map((scene, index) => {
-        const active = frame >= index * 3 * fps;
-        const current = Math.floor(frame / (3 * fps)) === index;
+        const active = frame >= index * sceneFrames;
+        const current = Math.floor(frame / sceneFrames) === index;
         return (
           <div key={scene.eyebrow} style={{ ...styles.timelineSegment, ...(active ? styles.timelineDone : null) }}>
             <div
               style={{
                 ...styles.timelineFill,
-                width: current ? `${progress(frame, index * 3 * fps, (index + 1) * 3 * fps) * 100}%` : active ? '100%' : '0%',
+                width: current ? `${progress(frame, index * sceneFrames, (index + 1) * sceneFrames) * 100}%` : active ? '100%' : '0%',
               }}
             />
           </div>
@@ -454,14 +513,6 @@ const styles: Record<string, CSSProperties> = {
   },
   brand: {
     fontSize: 31,
-  },
-  branch: {
-    padding: '10px 16px',
-    border: `1px solid ${palette.line}`,
-    borderRadius: 8,
-    background: 'rgba(255,255,255,0.06)',
-    color: palette.accent,
-    fontSize: 22,
   },
   introCopy: {
     position: 'absolute',
@@ -533,6 +584,54 @@ const styles: Record<string, CSSProperties> = {
     color: palette.muted,
     fontSize: 22,
     fontWeight: 760,
+  },
+  ctaScene: {
+    position: 'absolute',
+    inset: '145px 80px 100px',
+    display: 'grid',
+    gridTemplateColumns: '620px 1fr',
+    alignItems: 'center',
+    gap: 72,
+  },
+  ctaPetHalo: {
+    position: 'absolute',
+    left: 92,
+    top: 166,
+    width: 460,
+    height: 460,
+    borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(139,211,185,0.26), rgba(139,211,185,0) 68%)',
+  },
+  ctaPetGroup: {
+    position: 'relative',
+    height: 620,
+    display: 'grid',
+    placeItems: 'center',
+  },
+  ctaCopy: {
+    position: 'relative',
+    display: 'grid',
+    alignContent: 'center',
+    justifyItems: 'start',
+  },
+  ctaTitle: {
+    display: 'grid',
+    gap: 8,
+    margin: 0,
+    fontSize: 74,
+    lineHeight: 1.08,
+    letterSpacing: 0,
+    fontWeight: 900,
+  },
+  ctaUrl: {
+    marginTop: 40,
+    padding: '18px 26px',
+    border: '1px solid rgba(139,211,185,0.58)',
+    borderRadius: 10,
+    background: 'rgba(139,211,185,0.14)',
+    color: palette.accent,
+    fontSize: 30,
+    fontWeight: 820,
   },
   turntableStage: {
     position: 'relative',
@@ -868,17 +967,15 @@ const styles: Record<string, CSSProperties> = {
   footer: {
     position: 'absolute',
     left: 80,
-    right: 80,
     bottom: 46,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
     color: palette.muted,
     fontSize: 21,
   },
   timeline: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 80px)',
+    gridTemplateColumns: 'repeat(5, 80px)',
     gap: 10,
   },
   timelineSegment: {
