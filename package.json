@@ -12,7 +12,7 @@
     "install-pet": "node scripts/install-pet.mjs",
     "video:assets": "node scripts/prepare-promotion-assets.mjs",
     "video:studio": "npm run video:assets && remotion studio src/remotion/index.tsx",
-    "video:still": "npm run video:assets && mkdir -p out/promotion && remotion still src/remotion/index.tsx Promotion out/promotion/promo-frame.png --frame=210 --overwrite",
+    "video:still": "npm run video:assets && mkdir -p out/promotion && remotion still src/remotion/index.tsx Promotion out/promotion/promo-frame.png --frame=45 --overwrite",
     "video:render": "npm run video:assets && mkdir -p out/promotion && remotion render src/remotion/index.tsx Promotion out/promotion/vrm-codex-pet-builder-promo.mp4 --codec=h264 --pixel-format=yuv420p --overwrite"
   },
   "dependencies": {

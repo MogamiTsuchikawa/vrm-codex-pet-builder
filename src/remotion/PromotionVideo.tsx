@@ -1,11 +1,11 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 
 const CELL_WIDTH = 192;
 const CELL_HEIGHT = 208;
 const ATLAS_WIDTH = 1536;
 const ATLAS_HEIGHT = 1872;
-const ATLAS_SRC = 'promotion-assets/spritesheet.png';
+const ATLAS_SRC = 'promotion-assets/spritesheet.webp';
 
 const palette = {
   ink: '#edf4ef',
@@ -20,8 +20,8 @@ const palette = {
 
 type SceneCopy = {
   eyebrow: string;
-  title: string;
-  body: string;
+  titleLines: string[];
+  bodyLines: string[];
 };
 
 type StateButton = {
@@ -32,24 +32,24 @@ type StateButton = {
 
 const scenes: SceneCopy[] = [
   {
-    eyebrow: 'ブラウザだけで作成',
-    title: 'VRMをCodexペットに変換。',
-    body: 'ローカルで読み込み、状態を確認し、必要なファイルを出力します。',
+    eyebrow: '好きなキャラクターで',
+    titleLines: ['Codexのペット、', '好きなキャラクターの', 'VRMで作りませんか？'],
+    bodyLines: ['VRMを読み込んで、Codex用の', 'アニメーションWebPに変換します。'],
   },
   {
     eyebrow: 'アップロード不要',
-    title: 'モデルはブラウザの外へ出ません。',
-    body: 'キャラクターファイルは手元に置いたまま、プレビューと調整だけをブラウザで行います。',
+    titleLines: ['モデルは', 'ブラウザの外へ', '出ません。'],
+    bodyLines: ['手元のVRMを読み込み、', 'プレビューと調整だけを', 'ブラウザで行います。'],
   },
   {
     eyebrow: '仕様どおりのアトラス',
-    title: '実際に生成したspritesheetを表示。',
-    body: '待機、走り、手振り、ジャンプなどを固定8x9グリッドへ透明背景でレンダリングします。',
+    titleLines: ['生成アトラスを', 'そのまま確認。'],
+    bodyLines: ['実際に作ったspritesheet.webpを読み込み、', '8x9グリッドと各状態を', '透明背景で見せます。'],
   },
   {
     eyebrow: 'そのまま配置できるZIP',
-    title: 'pet.jsonとWebPをまとめてダウンロード。',
-    body: 'サイズ、透明度、未使用セルを検証してから、配布やインストールに進めます。',
+    titleLines: ['pet.jsonとWebPを', 'まとめて', 'ダウンロード。'],
+    bodyLines: ['サイズ、透明度、未使用セルを検証してから、', '配布やインストールに進めます。'],
   },
 ];
 
@@ -63,6 +63,17 @@ const states: StateButton[] = [
   { label: '待ち', row: 6, frames: 6 },
   { label: '走り', row: 7, frames: 6 },
   { label: 'レビュー', row: 8, frames: 6 },
+];
+
+const turntableFrames = [
+  { row: 0, col: 0, scaleX: 1 },
+  { row: 1, col: 0, scaleX: 0.96 },
+  { row: 1, col: 2, scaleX: 0.92 },
+  { row: 1, col: 4, scaleX: 0.96 },
+  { row: 0, col: 3, scaleX: 1 },
+  { row: 2, col: 4, scaleX: 0.96 },
+  { row: 2, col: 2, scaleX: 0.92 },
+  { row: 2, col: 0, scaleX: 0.96 },
 ];
 
 const fit = {
@@ -112,34 +123,21 @@ export const PromotionVideo = () => {
         <div style={styles.branch}>promotionブランチ</div>
       </div>
 
-      <div style={styles.copyColumn}>
-        <div style={{ ...styles.eyebrow, opacity: sceneFade }}>{copy.eyebrow}</div>
-        <h1
-          style={{
-            ...styles.title,
-            opacity: sceneFade,
-            transform: `translateY(${(1 - heroSpring) * 26}px)`,
-          }}
-        >
-          {copy.title}
-        </h1>
-        <p style={{ ...styles.body, opacity: sceneFade }}>{copy.body}</p>
-        <div style={styles.featureRow}>
-          <Pill active={activeScene >= 0}>ローカルVRM</Pill>
-          <Pill active={activeScene >= 1}>アップロードなし</Pill>
-          <Pill active={activeScene >= 2}>透明WebP</Pill>
-          <Pill active={activeScene >= 3}>pet.json</Pill>
-        </div>
-      </div>
-
-      <div
-        style={{
-          ...styles.visualColumn,
-          transform: `translateX(${ease(frame, [0, 48], [80, 0])}px)`,
-        }}
-      >
-        <BuilderMockup scene={activeScene} local={local} />
-      </div>
+      {activeScene === 0 ? (
+        <IntroHero copy={copy} sceneFade={sceneFade} heroSpring={heroSpring} local={local} />
+      ) : (
+        <>
+          <CopyBlock copy={copy} sceneFade={sceneFade} heroSpring={heroSpring} />
+          <div
+            style={{
+              ...styles.visualColumn,
+              transform: `translateX(${ease(frame, [0, 48], [80, 0])}px)`,
+            }}
+          >
+            <BuilderMockup scene={activeScene} local={local} />
+          </div>
+        </>
+      )}
 
       <div style={styles.footer}>
         <Timeline frame={frame} fps={fps} />
@@ -149,10 +147,127 @@ export const PromotionVideo = () => {
   );
 };
 
+function IntroHero({
+  copy,
+  sceneFade,
+  heroSpring,
+  local,
+}: {
+  copy: SceneCopy;
+  sceneFade: number;
+  heroSpring: number;
+  local: number;
+}) {
+  const frame = useCurrentFrame();
+  const spin = turntableFrames[frameIndex(frame, turntableFrames.length, 7)];
+  const webpCol = frameIndex(frame, states[3].frames, 6);
+  const arrowOffset = interpolate(Math.sin(frame / 8), [-1, 1], [-9, 9]);
+
+  return (
+    <>
+      <div style={styles.introCopy}>
+        <div style={{ ...styles.eyebrow, opacity: sceneFade }}>{copy.eyebrow}</div>
+        <h1
+          style={{
+            ...styles.introTitle,
+            opacity: sceneFade,
+            transform: `translateY(${(1 - heroSpring) * 28}px)`,
+          }}
+        >
+          {copy.titleLines.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </h1>
+        <div style={{ ...styles.introBody, opacity: sceneFade }}>
+          {copy.bodyLines.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ ...styles.transformRow, opacity: sceneFade }}>
+        <TransformCard title="VRMモデル" caption="いつものVRMを...">
+          <div style={styles.turntableStage}>
+            <div style={styles.turntableRing} />
+            <SpriteFrame row={spin.row} col={spin.col} scale={1.55 + Math.sin(frame / 12) * 0.02} rotate={0} scaleX={spin.scaleX} />
+          </div>
+        </TransformCard>
+
+        <div style={{ ...styles.arrowWrap, transform: `translateX(${arrowOffset}px)` }}>
+          <div style={styles.arrowShaft} />
+          <div style={styles.arrowHead}>→</div>
+        </div>
+
+        <TransformCard title="完成WebP" caption="Codexペットとして動く">
+          <div style={styles.completedStage}>
+            <div style={styles.webpBadge}>spritesheet.webp</div>
+            <SpriteFrame row={states[3].row} col={webpCol} scale={1.55} rotate={0} />
+          </div>
+        </TransformCard>
+      </div>
+
+      <div style={{ ...styles.featureRow, ...styles.introPills }}>
+        <Pill active>ローカルVRM</Pill>
+        <Pill active>アップロードなし</Pill>
+        <Pill active>透明WebP</Pill>
+        <Pill active>pet.json</Pill>
+      </div>
+    </>
+  );
+}
+
+function CopyBlock({
+  copy,
+  sceneFade,
+  heroSpring,
+}: {
+  copy: SceneCopy;
+  sceneFade: number;
+  heroSpring: number;
+}) {
+  return (
+    <div style={styles.copyColumn}>
+      <div style={{ ...styles.eyebrow, opacity: sceneFade }}>{copy.eyebrow}</div>
+      <h1
+        style={{
+          ...styles.title,
+          opacity: sceneFade,
+          transform: `translateY(${(1 - heroSpring) * 26}px)`,
+        }}
+      >
+        {copy.titleLines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </h1>
+      <div style={{ ...styles.body, opacity: sceneFade }}>
+        {copy.bodyLines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+      <div style={styles.featureRow}>
+        <Pill active>ローカルVRM</Pill>
+        <Pill active>アップロードなし</Pill>
+        <Pill active>透明WebP</Pill>
+        <Pill active>pet.json</Pill>
+      </div>
+    </div>
+  );
+}
+
+function TransformCard({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
+  return (
+    <div style={styles.transformCard}>
+      <div style={styles.transformTitle}>{title}</div>
+      <div style={styles.transformCanvas}>{children}</div>
+      <div style={styles.transformCaption}>{caption}</div>
+    </div>
+  );
+}
+
 function BuilderMockup({ scene, local }: { scene: number; local: number }) {
   const frame = useCurrentFrame();
   const pulse = (Math.sin(frame / 9) + 1) / 2;
-  const activeStateIndex = scene === 0 ? 0 : scene === 1 ? 3 : scene === 2 ? 1 : 8;
+  const activeStateIndex = scene === 1 ? 3 : scene === 2 ? 1 : 8;
   const activeState = states[activeStateIndex];
   const col = scene === 2 ? Math.floor(local * activeState.frames) % activeState.frames : frameIndex(frame, activeState.frames, 9);
   const petTurn = scene === 2 ? interpolate(local, [0, 1], [-4, 4], fit) : interpolate(pulse, [0, 1], [-2, 2]);
@@ -203,7 +318,7 @@ function BuilderMockup({ scene, local }: { scene: number; local: number }) {
 }
 
 function UploadCard({ scene }: { scene: number }) {
-  const uploadProgress = scene === 0 ? 0.38 : 1;
+  const uploadProgress = scene === 1 ? 0.42 : 1;
   return (
     <div style={styles.card}>
       <div style={styles.cardTitle}>1. VRMを読み込む</div>
@@ -234,7 +349,7 @@ function AtlasCard({ scene }: { scene: number }) {
           }}
         />
       </div>
-      <div style={styles.microcopy}>生成済みspritesheet.pngを使用</div>
+      <div style={styles.microcopy}>生成済みspritesheet.webpを使用</div>
     </div>
   );
 }
@@ -255,12 +370,24 @@ function PackageCard({ ready }: { ready: number }) {
   );
 }
 
-function SpriteFrame({ row, col, scale, rotate }: { row: number; col: number; scale: number; rotate: number }) {
+function SpriteFrame({
+  row,
+  col,
+  scale,
+  rotate,
+  scaleX = 1,
+}: {
+  row: number;
+  col: number;
+  scale: number;
+  rotate: number;
+  scaleX?: number;
+}) {
   return (
     <div
       style={{
         ...styles.spriteCrop,
-        transform: `scale(${scale}) rotate(${rotate}deg)`,
+        transform: `scale(${scale}) scaleX(${scaleX}) rotate(${rotate}deg)`,
       }}
     >
       <Img
@@ -336,6 +463,126 @@ const styles: Record<string, CSSProperties> = {
     color: palette.accent,
     fontSize: 22,
   },
+  introCopy: {
+    position: 'absolute',
+    left: 80,
+    top: 170,
+    width: 780,
+  },
+  introTitle: {
+    display: 'grid',
+    gap: 8,
+    margin: 0,
+    fontSize: 76,
+    lineHeight: 1.08,
+    letterSpacing: 0,
+    fontWeight: 900,
+  },
+  introBody: {
+    display: 'grid',
+    gap: 4,
+    marginTop: 32,
+    color: palette.muted,
+    fontSize: 34,
+    lineHeight: 1.45,
+    fontWeight: 720,
+  },
+  introPills: {
+    position: 'absolute',
+    left: 80,
+    top: 790,
+  },
+  transformRow: {
+    position: 'absolute',
+    right: 76,
+    top: 190,
+    width: 960,
+    height: 620,
+    display: 'grid',
+    gridTemplateColumns: '1fr 120px 1fr',
+    gap: 22,
+    alignItems: 'center',
+  },
+  transformCard: {
+    height: 570,
+    display: 'grid',
+    gridTemplateRows: '64px 1fr 58px',
+    padding: 22,
+    border: `1px solid ${palette.line}`,
+    borderRadius: 16,
+    background: '#20292c',
+    boxShadow: '0 48px 120px rgba(0,0,0,0.28)',
+  },
+  transformTitle: {
+    color: palette.ink,
+    fontSize: 31,
+    fontWeight: 860,
+  },
+  transformCanvas: {
+    position: 'relative',
+    display: 'grid',
+    placeItems: 'center',
+    overflow: 'hidden',
+    borderRadius: 12,
+    background:
+      'linear-gradient(45deg, rgba(255,255,255,0.055) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.055) 25%, transparent 25%), #121819',
+    backgroundSize: '28px 28px',
+  },
+  transformCaption: {
+    alignSelf: 'end',
+    color: palette.muted,
+    fontSize: 22,
+    fontWeight: 760,
+  },
+  turntableStage: {
+    position: 'relative',
+    display: 'grid',
+    placeItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  turntableRing: {
+    position: 'absolute',
+    width: 265,
+    height: 82,
+    border: '2px solid rgba(139,211,185,0.36)',
+    borderRadius: '50%',
+    transform: 'translateY(96px)',
+  },
+  completedStage: {
+    position: 'relative',
+    display: 'grid',
+    placeItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  webpBadge: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    padding: '9px 13px',
+    borderRadius: 8,
+    background: palette.accent,
+    color: '#10221b',
+    fontSize: 18,
+    fontWeight: 860,
+  },
+  arrowWrap: {
+    display: 'grid',
+    placeItems: 'center',
+  },
+  arrowShaft: {
+    width: 74,
+    height: 8,
+    borderRadius: 999,
+    background: palette.accent,
+  },
+  arrowHead: {
+    marginTop: -72,
+    color: palette.accent,
+    fontSize: 98,
+    fontWeight: 900,
+  },
   copyColumn: {
     position: 'absolute',
     left: 80,
@@ -349,18 +596,23 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: 24,
   },
   title: {
+    display: 'grid',
+    gap: 6,
     margin: 0,
-    fontSize: 78,
-    lineHeight: 1.12,
+    fontSize: 76,
+    lineHeight: 1.1,
     letterSpacing: 0,
     fontWeight: 860,
   },
   body: {
+    display: 'grid',
+    gap: 6,
     width: 680,
     margin: '34px 0 0',
     color: palette.muted,
-    fontSize: 33,
-    lineHeight: 1.55,
+    fontSize: 32,
+    lineHeight: 1.45,
+    fontWeight: 720,
   },
   featureRow: {
     display: 'flex',

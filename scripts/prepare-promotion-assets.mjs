@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = resolve(root, 'out/shibajii');
-const sourceAtlas = resolve(sourceDir, 'spritesheet.png');
+const sourceAtlas = resolve(sourceDir, 'spritesheet.webp');
 const sourceManifest = resolve(sourceDir, 'pet.json');
 const targetDir = resolve(root, 'public/promotion-assets');
-const targetAtlas = resolve(targetDir, 'spritesheet.png');
+const targetAtlas = resolve(targetDir, 'spritesheet.webp');
 const targetManifest = resolve(targetDir, 'pet.json');
 
 if (!existsSync(sourceAtlas) || !existsSync(sourceManifest)) {
