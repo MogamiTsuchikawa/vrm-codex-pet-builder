@@ -1,0 +1,31 @@
+{
+  "name": "vrm-codex-pet-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc && vite build",
+    "capture": "node scripts/capture.mjs",
+    "validate": "node scripts/validate-atlas.mjs",
+    "install-pet": "node scripts/install-pet.mjs"
+  },
+  "dependencies": {
+    "@jsquash/webp": "^1.5.0",
+    "@pixiv/three-vrm": "3.5.2",
+    "fflate": "^0.8.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.184.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "playwright": "^1.57.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.10"
+  }
+}

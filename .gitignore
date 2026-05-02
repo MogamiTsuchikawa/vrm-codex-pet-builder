@@ -1,0 +1,25 @@
+node_modules/
+dist/
+out/
+coverage/
+.vite/
+
+.DS_Store
+*.local.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.env
+.env.*
+!.env.example
+
+# Private/local character sources and generated pet assets.
+shibajii.vrm
+public/models/
+*.vrm
+*.vrma
+*.glb
+*.gltf
