@@ -39,3 +39,7 @@ npm run install-pet
 - `npm run install-pet` copies `out/shibajii/pet.json` and `out/shibajii/spritesheet.webp` into `${CODEX_HOME:-$HOME/.codex}/pets/shibajii`.
 
 `npm run capture` and `npm run install-pet` are local development helpers, not required for the public static app.
+
+## License
+
+MIT
