@@ -19,6 +19,7 @@ pnpm-debug.log*
 # Private/local character sources and generated pet assets.
 shibajii.vrm
 public/models/
+public/promotion-assets/
 *.vrm
 *.vrma
 *.glb

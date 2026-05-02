@@ -1,5 +1,11 @@
 import type { CSSProperties } from 'react';
-import { AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+
+const CELL_WIDTH = 192;
+const CELL_HEIGHT = 208;
+const ATLAS_WIDTH = 1536;
+const ATLAS_HEIGHT = 1872;
+const ATLAS_SRC = 'promotion-assets/spritesheet.png';
 
 const palette = {
   ink: '#edf4ef',
@@ -8,8 +14,6 @@ const palette = {
   panelDeep: '#111718',
   line: 'rgba(255,255,255,0.12)',
   accent: '#8bd3b9',
-  accentDark: '#173329',
-  blue: '#7b94d7',
   yellow: '#e6c878',
   red: '#e77b74',
 };
@@ -18,37 +22,48 @@ type SceneCopy = {
   eyebrow: string;
   title: string;
   body: string;
-  jp: string;
+};
+
+type StateButton = {
+  label: string;
+  row: number;
+  frames: number;
 };
 
 const scenes: SceneCopy[] = [
   {
-    eyebrow: 'Browser-only creator',
-    title: 'Turn VRM avatars into Codex pets.',
-    body: 'Upload locally. Preview states. Export the exact pet package.',
-    jp: 'VRMをブラウザ内で読み込み、Codex用ペット素材へ。',
+    eyebrow: 'ブラウザだけで作成',
+    title: 'VRMをCodexペットに変換。',
+    body: 'ローカルで読み込み、状態を確認し、必要なファイルを出力します。',
   },
   {
-    eyebrow: 'Private by design',
-    title: 'Your model never leaves the browser.',
-    body: 'Object URLs keep character files local while the builder renders previews in real time.',
-    jp: 'キャラクターファイルはアップロードせず、手元のブラウザで処理。',
+    eyebrow: 'アップロード不要',
+    title: 'モデルはブラウザの外へ出ません。',
+    body: 'キャラクターファイルは手元に置いたまま、プレビューと調整だけをブラウザで行います。',
   },
   {
-    eyebrow: 'Codex-ready atlas',
-    title: 'Render every state into one transparent WebP.',
-    body: 'Idle, run, wave, jump, fail, wait, run-in-place, and review states in the fixed 8x9 grid.',
-    jp: '8x9グリッド、192x208セル、未使用セルは透明。',
+    eyebrow: '仕様どおりのアトラス',
+    title: '実際に生成したspritesheetを表示。',
+    body: '待機、走り、手振り、ジャンプなどを固定8x9グリッドへ透明背景でレンダリングします。',
   },
   {
-    eyebrow: 'One click package',
-    title: 'Download a pet.json + spritesheet.zip.',
-    body: 'Validate dimensions, alpha, and unused cells before sharing or installing.',
-    jp: '検証済みZIPをそのまま配布・配置できます。',
+    eyebrow: 'そのまま配置できるZIP',
+    title: 'pet.jsonとWebPをまとめてダウンロード。',
+    body: 'サイズ、透明度、未使用セルを検証してから、配布やインストールに進めます。',
   },
 ];
 
-const states = ['Idle', 'Run R', 'Run L', 'Wave', 'Jump', 'Failed', 'Waiting', 'Run', 'Review'];
+const states: StateButton[] = [
+  { label: '待機', row: 0, frames: 6 },
+  { label: '右走り', row: 1, frames: 8 },
+  { label: '左走り', row: 2, frames: 8 },
+  { label: '手振り', row: 3, frames: 4 },
+  { label: 'ジャンプ', row: 4, frames: 5 },
+  { label: '失敗', row: 5, frames: 8 },
+  { label: '待ち', row: 6, frames: 6 },
+  { label: '走り', row: 7, frames: 6 },
+  { label: 'レビュー', row: 8, frames: 6 },
+];
 
 const fit = {
   extrapolateLeft: 'clamp',
@@ -68,6 +83,10 @@ function ease(frame: number, input: [number, number], output: [number, number]):
     ...fit,
     easing: Easing.bezier(0.16, 1, 0.3, 1),
   });
+}
+
+function frameIndex(frame: number, frames: number, speed: number): number {
+  return Math.floor(frame / speed) % frames;
 }
 
 export const PromotionVideo = () => {
@@ -90,7 +109,7 @@ export const PromotionVideo = () => {
       <div style={styles.gridTexture} />
       <div style={styles.header}>
         <div style={styles.brand}>VRM Codex Pet Builder</div>
-        <div style={styles.branch}>promotion branch</div>
+        <div style={styles.branch}>promotionブランチ</div>
       </div>
 
       <div style={styles.copyColumn}>
@@ -105,11 +124,10 @@ export const PromotionVideo = () => {
           {copy.title}
         </h1>
         <p style={{ ...styles.body, opacity: sceneFade }}>{copy.body}</p>
-        <p style={{ ...styles.jp, opacity: sceneFade }}>{copy.jp}</p>
         <div style={styles.featureRow}>
-          <Pill active={activeScene >= 0}>Local VRM</Pill>
-          <Pill active={activeScene >= 1}>No upload</Pill>
-          <Pill active={activeScene >= 2}>Transparent WebP</Pill>
+          <Pill active={activeScene >= 0}>ローカルVRM</Pill>
+          <Pill active={activeScene >= 1}>アップロードなし</Pill>
+          <Pill active={activeScene >= 2}>透明WebP</Pill>
           <Pill active={activeScene >= 3}>pet.json</Pill>
         </div>
       </div>
@@ -125,7 +143,7 @@ export const PromotionVideo = () => {
 
       <div style={styles.footer}>
         <Timeline frame={frame} fps={fps} />
-        <span>Static Vite app · React + Three.js + Remotion</span>
+        <span>静的Viteアプリ · React + Three.js + Remotion</span>
       </div>
     </AbsoluteFill>
   );
@@ -134,7 +152,10 @@ export const PromotionVideo = () => {
 function BuilderMockup({ scene, local }: { scene: number; local: number }) {
   const frame = useCurrentFrame();
   const pulse = (Math.sin(frame / 9) + 1) / 2;
-  const petTurn = scene === 2 ? interpolate(local, [0, 1], [-7, 7], fit) : interpolate(pulse, [0, 1], [-3, 3]);
+  const activeStateIndex = scene === 0 ? 0 : scene === 1 ? 3 : scene === 2 ? 1 : 8;
+  const activeState = states[activeStateIndex];
+  const col = scene === 2 ? Math.floor(local * activeState.frames) % activeState.frames : frameIndex(frame, activeState.frames, 9);
+  const petTurn = scene === 2 ? interpolate(local, [0, 1], [-4, 4], fit) : interpolate(pulse, [0, 1], [-2, 2]);
   const packageReady = scene === 3 ? ease(local, [0.2, 0.62], [0, 1]) : 0;
 
   return (
@@ -151,26 +172,23 @@ function BuilderMockup({ scene, local }: { scene: number; local: number }) {
       <div style={styles.mockupBody}>
         <div style={styles.previewPanel}>
           <div style={styles.panelHeader}>
-            <span>Preview</span>
+            <span>プレビュー</span>
             <span style={styles.cellBadge}>192x208</span>
           </div>
           <div style={styles.previewStage}>
             <div style={styles.cellFrame}>
-              <Mascot scale={1 + pulse * 0.035} rotate={petTurn} wave={scene === 1 || scene === 2} />
+              <SpriteFrame row={activeState.row} col={col} scale={1.16 + pulse * 0.035} rotate={petTurn} />
             </div>
           </div>
           <div style={styles.stateGrid}>
-            {states.map((state, index) => (
-              <div
-                key={state}
-                style={{
-                  ...styles.stateButton,
-                  ...(index === scene || (scene === 2 && index < 5) ? styles.stateActive : null),
-                }}
-              >
-                {state}
-              </div>
-            ))}
+            {states.map((state, index) => {
+              const active = index === activeStateIndex || (scene === 2 && index >= 0 && index <= 4);
+              return (
+                <div key={state.label} style={{ ...styles.stateButton, ...(active ? styles.stateActive : null) }}>
+                  {state.label}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -188,15 +206,15 @@ function UploadCard({ scene }: { scene: number }) {
   const uploadProgress = scene === 0 ? 0.38 : 1;
   return (
     <div style={styles.card}>
-      <div style={styles.cardTitle}>1. Load VRM</div>
+      <div style={styles.cardTitle}>1. VRMを読み込む</div>
       <div style={styles.dropzone}>
         <div style={styles.fileIcon}>VRM</div>
-        <div style={styles.dropText}>Choose VRM / GLB</div>
+        <div style={styles.dropText}>VRM / GLBを選択</div>
       </div>
       <div style={styles.progressTrack}>
         <div style={{ ...styles.progressFill, width: `${uploadProgress * 100}%` }} />
       </div>
-      <div style={styles.microcopy}>Processed locally. Nothing is uploaded.</div>
+      <div style={styles.microcopy}>ブラウザ内で処理されます。アップロードはされません。</div>
     </div>
   );
 }
@@ -205,19 +223,18 @@ function AtlasCard({ scene }: { scene: number }) {
   const active = scene >= 2;
   return (
     <div style={styles.card}>
-      <div style={styles.cardTitle}>2. Atlas</div>
-      <div style={styles.atlasGrid}>
-        {Array.from({ length: 72 }).map((_, index) => {
-          const row = Math.floor(index / 8);
-          const col = index % 8;
-          const empty = col >= (row === 0 ? 6 : row === 3 ? 4 : row === 4 ? 5 : row > 5 ? 6 : 8);
-          return (
-            <div key={index} style={{ ...styles.atlasCell, opacity: active ? (empty ? 0.16 : 1) : 0.34 }}>
-              {!empty ? <MiniPet delay={index * 0.07} /> : null}
-            </div>
-          );
-        })}
+      <div style={styles.cardTitle}>2. アトラス</div>
+      <div style={styles.atlasPreviewBox}>
+        <Img
+          src={staticFile(ATLAS_SRC)}
+          style={{
+            ...styles.atlasPreviewImage,
+            opacity: active ? 1 : 0.42,
+            transform: `scale(${active ? 1 : 0.96})`,
+          }}
+        />
       </div>
+      <div style={styles.microcopy}>生成済みspritesheet.pngを使用</div>
     </div>
   );
 }
@@ -225,7 +242,7 @@ function AtlasCard({ scene }: { scene: number }) {
 function PackageCard({ ready }: { ready: number }) {
   return (
     <div style={styles.card}>
-      <div style={styles.cardTitle}>3. Generate</div>
+      <div style={styles.cardTitle}>3. 生成</div>
       <div style={styles.zipBox}>
         <div style={{ ...styles.zipLid, transform: `translateY(${(1 - ready) * 18}px)` }} />
         <div style={styles.zipBody}>
@@ -233,39 +250,28 @@ function PackageCard({ ready }: { ready: number }) {
           <span>spritesheet.webp</span>
         </div>
       </div>
-      <div style={{ ...styles.readyLine, opacity: ready }}>ZIP package is ready.</div>
+      <div style={{ ...styles.readyLine, opacity: ready }}>ZIPパッケージの準備ができました。</div>
     </div>
   );
 }
 
-function Mascot({ scale, rotate, wave }: { scale: number; rotate: number; wave: boolean }) {
-  const frame = useCurrentFrame();
-  const arm = wave ? Math.sin(frame / 4) * 16 - 22 : Math.sin(frame / 12) * 6;
+function SpriteFrame({ row, col, scale, rotate }: { row: number; col: number; scale: number; rotate: number }) {
   return (
     <div
       style={{
-        ...styles.mascot,
+        ...styles.spriteCrop,
         transform: `scale(${scale}) rotate(${rotate}deg)`,
       }}
     >
-      <div style={styles.antenna} />
-      <div style={styles.face}>
-        <span style={styles.eye} />
-        <span style={styles.eye} />
-      </div>
-      <div style={styles.mouth} />
-      <span style={{ ...styles.arm, left: -32, transform: 'rotate(10deg)' }} />
-      <span style={{ ...styles.arm, right: -32, transform: `rotate(${arm}deg)` }} />
-      <span style={{ ...styles.foot, left: 36 }} />
-      <span style={{ ...styles.foot, right: 36 }} />
+      <Img
+        src={staticFile(ATLAS_SRC)}
+        style={{
+          ...styles.spriteSheet,
+          transform: `translate(${-col * CELL_WIDTH}px, ${-row * CELL_HEIGHT}px)`,
+        }}
+      />
     </div>
   );
-}
-
-function MiniPet({ delay }: { delay: number }) {
-  const frame = useCurrentFrame();
-  const hop = Math.sin(frame / 8 + delay) * 2;
-  return <div style={{ ...styles.miniPet, transform: `translateY(${hop}px)` }} />;
 }
 
 function Pill({ active, children }: { active: boolean; children: string }) {
@@ -333,33 +339,28 @@ const styles: Record<string, CSSProperties> = {
   copyColumn: {
     position: 'absolute',
     left: 80,
-    top: 185,
-    width: 690,
+    top: 184,
+    width: 720,
   },
   eyebrow: {
     color: palette.accent,
-    fontSize: 28,
+    fontSize: 29,
     fontWeight: 820,
     marginBottom: 24,
   },
   title: {
     margin: 0,
-    fontSize: 84,
-    lineHeight: 1.02,
+    fontSize: 78,
+    lineHeight: 1.12,
     letterSpacing: 0,
     fontWeight: 860,
   },
   body: {
+    width: 680,
     margin: '34px 0 0',
     color: palette.muted,
-    fontSize: 34,
-    lineHeight: 1.35,
-  },
-  jp: {
-    margin: '26px 0 0',
-    color: '#d6e6de',
-    fontSize: 27,
-    lineHeight: 1.45,
+    fontSize: 33,
+    lineHeight: 1.55,
   },
   featureRow: {
     display: 'flex',
@@ -467,9 +468,25 @@ const styles: Record<string, CSSProperties> = {
     height: 258,
     display: 'grid',
     placeItems: 'center',
+    overflow: 'hidden',
     border: '2px solid rgba(236,245,240,0.25)',
     borderRadius: 8,
     background: 'rgba(0,0,0,0.25)',
+  },
+  spriteCrop: {
+    position: 'relative',
+    width: CELL_WIDTH,
+    height: CELL_HEIGHT,
+    overflow: 'hidden',
+    transformOrigin: 'center',
+  },
+  spriteSheet: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: ATLAS_WIDTH,
+    height: ATLAS_HEIGHT,
+    maxWidth: 'none',
   },
   stateGrid: {
     display: 'grid',
@@ -548,28 +565,21 @@ const styles: Record<string, CSSProperties> = {
     marginTop: 10,
     color: palette.muted,
     fontSize: 15,
+    lineHeight: 1.4,
   },
-  atlasGrid: {
+  atlasPreviewBox: {
+    height: 232,
     display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
-    gap: 4,
-    padding: 8,
+    placeItems: 'center',
+    overflow: 'hidden',
     borderRadius: 8,
     background: '#050607',
   },
-  atlasCell: {
-    height: 28,
-    display: 'grid',
-    placeItems: 'center',
-    borderRadius: 3,
-    background: 'rgba(255,255,255,0.035)',
-  },
-  miniPet: {
-    width: 15,
-    height: 19,
-    borderRadius: '9px 9px 7px 7px',
-    background: palette.accent,
-    boxShadow: 'inset 0 -4px 0 rgba(0,0,0,0.18)',
+  atlasPreviewImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    transition: 'none',
   },
   zipBox: {
     position: 'relative',
@@ -602,62 +612,6 @@ const styles: Record<string, CSSProperties> = {
     color: palette.accent,
     fontSize: 17,
     fontWeight: 800,
-  },
-  mascot: {
-    position: 'relative',
-    width: 132,
-    height: 160,
-    borderRadius: '64px 64px 42px 42px',
-    background: '#2d8f3f',
-    boxShadow: 'inset 0 -28px 0 rgba(0,0,0,0.16)',
-  },
-  antenna: {
-    position: 'absolute',
-    top: -24,
-    left: 55,
-    width: 22,
-    height: 36,
-    borderRadius: '18px 18px 8px 8px',
-    background: '#49aa5f',
-  },
-  face: {
-    position: 'absolute',
-    top: 49,
-    left: 30,
-    display: 'flex',
-    gap: 18,
-  },
-  eye: {
-    width: 25,
-    height: 25,
-    borderRadius: 999,
-    background: '#fff',
-    boxShadow: 'inset 8px 7px 0 #6f1d18',
-  },
-  mouth: {
-    position: 'absolute',
-    left: 52,
-    top: 88,
-    width: 30,
-    height: 15,
-    borderRadius: '0 0 20px 20px',
-    borderBottom: '7px solid #6f1d18',
-  },
-  arm: {
-    position: 'absolute',
-    top: 86,
-    width: 44,
-    height: 17,
-    borderRadius: 999,
-    background: '#2d8f3f',
-  },
-  foot: {
-    position: 'absolute',
-    bottom: -17,
-    width: 21,
-    height: 32,
-    borderRadius: '0 0 14px 14px',
-    background: '#6f1d18',
   },
   footer: {
     position: 'absolute',

@@ -10,9 +10,10 @@
     "capture": "node scripts/capture.mjs",
     "validate": "node scripts/validate-atlas.mjs",
     "install-pet": "node scripts/install-pet.mjs",
-    "video:studio": "remotion studio src/remotion/index.tsx",
-    "video:still": "mkdir -p out/promotion && remotion still src/remotion/index.tsx Promotion out/promotion/promo-frame.png --frame=210 --overwrite",
-    "video:render": "mkdir -p out/promotion && remotion render src/remotion/index.tsx Promotion out/promotion/vrm-codex-pet-builder-promo.mp4 --codec=h264 --pixel-format=yuv420p --overwrite"
+    "video:assets": "node scripts/prepare-promotion-assets.mjs",
+    "video:studio": "npm run video:assets && remotion studio src/remotion/index.tsx",
+    "video:still": "npm run video:assets && mkdir -p out/promotion && remotion still src/remotion/index.tsx Promotion out/promotion/promo-frame.png --frame=210 --overwrite",
+    "video:render": "npm run video:assets && mkdir -p out/promotion && remotion render src/remotion/index.tsx Promotion out/promotion/vrm-codex-pet-builder-promo.mp4 --codec=h264 --pixel-format=yuv420p --overwrite"
   },
   "dependencies": {
     "@jsquash/webp": "^1.5.0",

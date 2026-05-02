@@ -30,6 +30,7 @@ npm run build
 npm run capture
 npm run validate
 npm run install-pet
+npm run video:assets
 npm run video:render
 ```
 
@@ -38,6 +39,7 @@ npm run video:render
 - `npm run capture` is a local regression helper that uploads a private local `shibajii.vrm`, generates the ZIP through the browser UI, and extracts generated files into `out/shibajii/`.
 - `npm run validate` checks the generated PNG atlas dimensions, used frames, and transparent unused cells.
 - `npm run install-pet` copies `out/shibajii/pet.json` and `out/shibajii/spritesheet.webp` into `${CODEX_HOME:-$HOME/.codex}/pets/shibajii`.
+- `npm run video:assets` copies ignored local generated files from `out/shibajii/` into ignored Remotion assets under `public/promotion-assets/`.
 - `npm run video:studio` opens Remotion Studio for the promotional composition.
 - `npm run video:still` renders a still frame to `out/promotion/promo-frame.png`.
 - `npm run video:render` renders the promotional MP4 to `out/promotion/vrm-codex-pet-builder-promo.mp4`.
@@ -46,7 +48,7 @@ npm run video:render
 
 ## Promotion video
 
-The `promotion` branch includes a Remotion composition named `Promotion`. It uses generated UI and atlas illustrations only, so private VRM files are not required for rendering.
+The `promotion` branch includes a Remotion composition named `Promotion`. It reads the locally generated atlas from `out/shibajii/spritesheet.png` via `npm run video:assets`, while keeping character assets out of git.
 
 ## License
 
